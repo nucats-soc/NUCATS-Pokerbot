@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NUCATS Pokerbots</title>
+<style>
+:root {
+  --bg: #f4f3ef;
+  --panel: #ffffff;
+  --panel-2: #f8f7f4;
+  --line: #e2dfd8;
+  --text: #1d1d1b;
+  --muted: #6d6a63;
+  --accent: #2f6fde;
+  --felt: #1f6b4a;
+  --felt-edge: #154b34;
+  --felt-rim: #6b4a2b;
+  --felt-text: #e9f5ee;
+  --card: #ffffff;
+  --card-line: #d9d6cf;
+  --red: #c8332b;
+  --black: #1d1d1b;
+  --win: #e8a317;
+  --seat: #ffffff;
+  --seat-text: #1d1d1b;
+  --act: #2f6fde;
+  --bad: #c8332b;
+  --good: #23824f;
+  --chip: #f2c94c;
+  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #131416; --panel: #1c1d20; --panel-2: #222327; --line: #2e3035;
+    --text: #ececea; --muted: #9a9892; --accent: #6d9cf2;
+    --felt: #18563b; --felt-edge: #0f3a27; --felt-rim: #3d2a19; --felt-text: #d9efe3;
+    --card: #f4f3ef; --card-line: #c9c6bf; --seat: #26282c; --seat-text: #ececea;
+    --act: #6d9cf2; --bad: #e0675f; --good: #4cb67c;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #131416; --panel: #1c1d20; --panel-2: #222327; --line: #2e3035;
+  --text: #ececea; --muted: #9a9892; --accent: #6d9cf2;
+  --felt: #18563b; --felt-edge: #0f3a27; --felt-rim: #3d2a19; --felt-text: #d9efe3;
+  --card: #f4f3ef; --card-line: #c9c6bf; --seat: #26282c; --seat-text: #ececea;
+  --act: #6d9cf2; --bad: #e0675f; --good: #4cb67c;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.3);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding: 0 16px 24px;
+}
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- header ---------- */
+header {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 14px 0; border-bottom: 1px solid var(--line); margin-bottom: 16px;
+}
+header h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px;
+  border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line);
+  font-size: 12px; color: var(--muted);
+}
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.pill.live .dot { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent); }
+.pill.stopped .dot { background: var(--bad); }
+.meta { color: var(--muted); font-size: 13px; }
+.spacer { flex: 1; }
+.btn {
+  font: inherit; font-weight: 600; font-size: 13px; padding: 6px 14px; border-radius: 8px;
+  border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer;
+}
+.btn:hover:not(:disabled) { filter: brightness(1.08); }
+.btn:disabled { background: var(--panel-2); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
+.btn.big { font-size: 15px; padding: 9px 18px; margin-top: 12px; }
+.notice { font-size: 13px; color: var(--muted); }
+.notice.err { color: var(--bad); }
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; }
+
+/* ---------- layout ---------- */
+main {
+  display: grid; gap: 16px;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  align-items: start;
+}
+@media (max-width: 1000px) { main { grid-template-columns: minmax(0, 1fr); } }
+.panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.panel h2 {
+  font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+  margin: 0; padding: 12px 14px; border-bottom: 1px solid var(--line); font-weight: 600;
+}
+aside { display: grid; gap: 16px; }
+
+/* ---------- table ---------- */
+.table-wrap { padding: 44px 16px 28px; overflow-x: auto; }
+.table {
+  position: relative; width: 100%; min-width: 640px; max-width: 980px; margin: 0 auto;
+  aspect-ratio: 16 / 9;
+}
+.felt {
+  position: absolute; inset: 11% 9%;
+  border-radius: 999px;
+  background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--felt) 85%, white) 0%, var(--felt) 55%, var(--felt-edge) 100%);
+  border: 12px solid var(--felt-rim);
+  box-shadow: inset 0 0 40px rgba(0,0,0,.35), var(--shadow);
+}
+.center {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  color: var(--felt-text); text-align: center; width: 60%;
+}
+.board { display: flex; gap: 6px; }
+.pot { font-size: 15px; font-weight: 650; }
+.street { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; opacity: .8; }
+.banner {
+  background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 8px; font-size: 13px;
+}
+
+/* cards */
+.card {
+  width: 38px; height: 54px; border-radius: 6px; background: var(--card);
+  border: 1px solid var(--card-line); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; line-height: 1; font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0,0,0,.25); color: var(--black);
+}
+.card .r { font-size: 17px; }
+.card .s { font-size: 16px; margin-top: 2px; }
+.card.red { color: var(--red); }
+.card.slot { background: rgba(255,255,255,.08); border: 1px dashed rgba(255,255,255,.3); box-shadow: none; }
+.card.back {
+  background: repeating-linear-gradient(45deg, #3a5fb0 0 4px, #2f4f95 4px 8px);
+  border-color: #23407a;
+}
+.card.sm { width: 30px; height: 42px; }
+.card.sm .r { font-size: 14px; } .card.sm .s { font-size: 13px; }
+.card.dim { opacity: .35; }
+
+/* seats */
+.seat {
+  position: absolute; transform: translate(-50%, -50%);
+  width: 150px; background: var(--seat); color: var(--seat-text);
+  border: 2px solid var(--line); border-radius: 12px; padding: 8px 10px;
+  box-shadow: var(--shadow); transition: border-color .2s, opacity .2s;
+}
+.seat.empty { background: transparent; border: 2px dashed color-mix(in srgb, var(--muted) 40%, transparent); box-shadow: none; color: var(--muted); text-align: center; font-size: 12px; }
+.seat.acting { border-color: var(--act); box-shadow: 0 0 0 4px color-mix(in srgb, var(--act) 25%, transparent), var(--shadow); }
+.seat.winner { border-color: var(--win); box-shadow: 0 0 0 4px color-mix(in srgb, var(--win) 30%, transparent), var(--shadow); }
+.seat.folded, .seat.out { opacity: .5; }
+.seat .top { display: flex; align-items: baseline; gap: 6px; }
+.seat .name { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.seat .pid { font-size: 11px; color: var(--muted); }
+.seat .stack { font-size: 16px; font-weight: 700; }
+.seat .row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 4px; }
+.seat .cards { display: flex; gap: 3px; }
+.badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; min-height: 18px; }
+.badge {
+  font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  padding: 1px 6px; border-radius: 4px; background: var(--panel-2); color: var(--muted);
+  border: 1px solid var(--line);
+}
+.badge.dealer { background: var(--text); color: var(--bg); border-color: var(--text); }
+.badge.allin { background: var(--bad); color: #fff; border-color: var(--bad); }
+.badge.warn { background: transparent; color: var(--bad); border-color: var(--bad); }
+.last {
+  position: absolute; left: 50%; transform: translateX(-50%); top: -22px;
+  background: var(--text); color: var(--bg); font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+}
+.last.auto { background: var(--bad); color: #fff; }
+.timer { height: 3px; border-radius: 2px; background: var(--line); margin-top: 6px; overflow: hidden; }
+.timer > div { height: 100%; background: var(--act); width: 100%; }
+.bet {
+  position: absolute; transform: translate(-50%, -50%);
+  display: flex; align-items: center; gap: 5px; color: var(--felt-text);
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.bet::before {
+  content: ""; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--chip); border: 2px dashed rgba(0,0,0,.35);
+}
+.gain { color: var(--good); font-weight: 700; }
+.loss { color: var(--bad); font-weight: 700; }
+
+/* lobby + final overlays */
+.overlay {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  background: var(--panel); color: var(--text); border-radius: 12px; border: 1px solid var(--line);
+  box-shadow: var(--shadow); padding: 16px 18px; min-width: 300px; max-width: 80%;
+}
+.overlay h3 { margin: 0 0 8px; font-size: 15px; }
+.overlay p { margin: 0; color: var(--muted); }
+
+/* ---------- leaderboard ---------- */
+table.lb { width: 100%; border-collapse: collapse; }
+table.lb th, table.lb td { padding: 7px 14px; text-align: left; }
+table.lb th { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+table.lb td { border-top: 1px solid var(--line); }
+table.lb td.r, table.lb th.r { text-align: right; }
+table.lb tr.busted td { color: var(--muted); }
+.empty-note { padding: 14px; color: var(--muted); font-size: 13px; }
+
+/* ---------- action log ---------- */
+.log { max-height: 520px; overflow-y: auto; padding: 4px 0 8px; }
+.log .hand { padding: 10px 14px 4px; font-weight: 650; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); position: sticky; top: 0; z-index: 1; background: var(--panel); }
+.log .street-row { padding: 6px 14px; margin: 4px 0; background: var(--panel-2); font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.log .street-row .cards { display: inline-flex; gap: 3px; }
+.log .item { padding: 3px 14px; display: flex; gap: 8px; font-size: 13px; }
+.log .item .who { font-weight: 600; }
+.log .item .what { flex: 1; }
+.log .item .tag { font-size: 10px; font-weight: 700; color: var(--bad); text-transform: uppercase; border: 1px solid var(--bad); border-radius: 4px; padding: 0 5px; align-self: center; }
+.log .item.result { color: var(--good); }
+.log .item.system { color: var(--muted); font-style: italic; }
+/* ---------- phones: upright table ---------- */
+@media (max-width: 700px) {
+  .table-wrap { padding: 36px 8px 20px; }
+  .table { min-width: 0; aspect-ratio: 3 / 4; }
+  .felt { inset: 9% 16%; border-width: 8px; }
+  .center { width: 56%; gap: 6px; }
+  .board { gap: 3px; }
+  .board .card { width: 30px; height: 42px; }
+  .board .card .r { font-size: 14px; } .board .card .s { font-size: 13px; }
+  .seat { width: 122px; padding: 6px 8px; }
+  .seat .stack { font-size: 14px; }
+  .seat .pid { display: none; }
+  .card.sm { width: 24px; height: 34px; }
+  .card.sm .r { font-size: 12px; } .card.sm .s { font-size: 11px; }
+  .overlay { min-width: 0; width: 92%; max-width: none; padding: 12px; }
+  table.lb th, table.lb td { padding: 6px 8px; }
+}
+.mini-card { font-weight: 700; padding: 0 3px; border-radius: 3px; background: var(--card); border: 1px solid var(--card-line); color: var(--black); font-size: 12px; }
+.mini-card.red { color: var(--red); }
+</style>
+</head>
+<body>
+<header>
+  <h1>NUCATS Pokerbots</h1>
+  <span id="conn" class="pill"><span class="dot"></span><span>Connecting…</span></span>
+  <span id="meta" class="meta"></span>
+  <span class="spacer"></span>
+  <span id="notice" class="notice" role="status"></span>
+  <button id="startBtn" class="btn" type="button" hidden>Start match</button>
+  <label class="toggle"><input type="checkbox" id="showCards" checked> Show hole cards</label>
+</header>
+
+<main>
+  <section class="panel table-wrap">
+    <div class="table" id="table"></div>
+  </section>
+  <aside>
+    <section class="panel">
+      <h2 id="lbTitle">Chip counts</h2>
+      <div id="leaderboard"></div>
+    </section>
+    <section class="panel">
+      <h2>Action log</h2>
+      <div class="log" id="log"></div>
+    </section>
+  </aside>
+</main>
+
+<script>
+"use strict";
+
+// Seat positions round the table (percent of the table box), clockwise from
+// the bottom. Bets sit part-way towards the centre.
+const SEAT_POS_WIDE = [[50, 93], [9, 73], [9, 27], [50, 7], [91, 27], [91, 73]];
+const SEAT_POS_TALL = [[50, 94], [17, 71], [17, 29], [50, 6], [83, 29], [83, 71]];
+const narrow = window.matchMedia("(max-width: 700px)");
+const seatPos = () => narrow.matches ? SEAT_POS_TALL : SEAT_POS_WIDE;
+const SUITS = { c: "♣", d: "♦", h: "♥", s: "♠" };
+const STREET_NAMES = { preflop: "Preflop", flop: "Flop", turn: "Turn", river: "River" };
+
+const state = { conn: "connecting", lobby: [], match: null, server: null, starting: false, notice: null };
+
+// ---------------------------------------------------------------- helpers
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const isRed = c => c[1] === "h" || c[1] === "d";
+const rankLabel = r => r === "T" ? "10" : r;
+function cardHTML(c, cls = "") {
+  if (!c) return `<div class="card slot ${cls}"></div>`;
+  if (c === "back") return `<div class="card back ${cls}"></div>`;
+  return `<div class="card ${isRed(c) ? "red" : ""} ${cls}"><span class="r">${rankLabel(c[0])}</span><span class="s">${SUITS[c[1]]}</span></div>`;
+}
+const miniCard = c => `<span class="mini-card ${isRed(c) ? "red" : ""}">${rankLabel(c[0])}${SUITS[c[1]]}</span>`;
+const signed = n => (n > 0 ? "+" : n < 0 ? "−" : "±") + Math.abs(n);
+function storage(key, value) {
+  try {
+    if (value === undefined) return localStorage.getItem(key);
+    localStorage.setItem(key, value);
+  } catch (e) { return null; }
+}
+
+// ------------------------------------------------------------------ state
+function seatName(m, n) { return m.seats[n] ? m.seats[n].name : `Seat ${n}`; }
+
+function addLog(m, entry) {
+  m.log.push(entry);
+  if (m.log.length > 3000) m.log.splice(0, m.log.length - 3000);
+}
+
+function actionLabel(e, wasBet) {
+  switch (e.action) {
+    case "small_blind": return `posts small blind ${e.amount}`;
+    case "big_blind": return `posts big blind ${e.amount}`;
+    case "fold": return "folds";
+    case "check": return "checks";
+    case "call": return `calls ${e.amount}`;
+    case "raise": return wasBet ? `raises to ${e.amount}` : `bets ${e.amount}`;
+  }
+  return e.action;
+}
+function shortLabel(e, wasBet) {
+  switch (e.action) {
+    case "small_blind": return `SB ${e.amount}`;
+    case "big_blind": return `BB ${e.amount}`;
+    case "fold": return "Fold";
+    case "check": return "Check";
+    case "call": return `Call ${e.amount}`;
+    case "raise": return wasBet ? `Raise to ${e.amount}` : `Bet ${e.amount}`;
+  }
+  return e.action;
+}
+
+function apply(e) {
+  let m = state.match;
+  switch (e.type) {
+    case "lobby":
+      state.lobby = e.players;
+      state.server = { manual: !!e.manual_start, running: !!e.match_running,
+                       min: e.min_players || 2, max: e.max_players || 6 };
+      break;
+
+    case "match_info":
+      state.match = m = {
+        id: e.match_id, config: e.config, seed: e.seed, seats: {}, hand: 0,
+        button: null, sb: null, bb: null, board: [], pot: 0, street: null,
+        toAct: null, result: null, standings: null, log: [], maxBet: 0,
+      };
+      addLog(m, { kind: "system", text: `Match ${e.match_id} started · seed ${e.seed}` });
+      break;
+
+    case "match_start":
+      if (!m) return;
+      for (const s of e.seats) {
+        m.seats[s.seat] = { ...s, stack: m.config.starting_stack, start: m.config.starting_stack,
+                            bet: 0, status: "active", cards: [], last: null, connected: s.connected !== false };
+      }
+      break;
+
+    case "hand_start":
+      if (!m) return;
+      Object.assign(m, { hand: e.hand_number, button: e.button, sb: e.small_blind.seat,
+                         bb: e.big_blind.seat, board: [], pot: 0, street: "preflop",
+                         toAct: null, result: null, maxBet: 0 });
+      for (const s of e.seats) {
+        const seat = m.seats[s.seat];
+        if (!seat) continue;
+        Object.assign(seat, { stack: s.stack, status: s.status, bet: 0, last: null,
+                              connected: s.connected !== false,
+                              cards: (e.hole_cards && e.hole_cards[s.seat]) || [] });
+      }
+      addLog(m, { kind: "hand", text: `Hand ${e.hand_number}` });
+      break;
+
+    case "to_act":
+      if (!m) return;
+      m.toAct = { seat: e.seat, deadline: performance.now() + e.timeout_ms, timeout: e.timeout_ms };
+      break;
+
+    case "player_action": {
+      if (!m || !m.seats[e.seat]) return;
+      const seat = m.seats[e.seat];
+      const wasBet = m.maxBet > 0;
+      seat.stack = e.stack;
+      m.pot = e.pot;
+      if (e.action === "small_blind" || e.action === "big_blind") seat.bet = e.amount;
+      else if (e.action === "call") seat.bet += e.amount;
+      else if (e.action === "raise") seat.bet = e.amount;
+      if (e.action === "fold") seat.status = "folded";
+      else if (seat.stack === 0) seat.status = "all_in";
+      m.maxBet = Math.max(m.maxBet, seat.bet);
+      seat.last = { text: shortLabel(e, wasBet), auto: e.auto };
+      if (e.auto && e.auto === "disconnected") seat.connected = false;
+      m.toAct = null;
+      addLog(m, { kind: "action", who: seat.name, text: actionLabel(e, wasBet),
+                  auto: e.auto, blind: e.action.endsWith("blind") });
+      break;
+    }
+
+    case "street":
+      if (!m) return;
+      m.board = e.board; m.pot = e.pot; m.street = e.street; m.maxBet = 0; m.toAct = null;
+      for (const s of Object.values(m.seats)) { s.bet = 0; s.last = null; }
+      addLog(m, { kind: "street", street: e.street, board: e.board, pot: e.pot });
+      break;
+
+    case "hand_end":
+      if (!m) return;
+      m.board = e.board; m.toAct = null; m.result = e; m.street = "done";
+      for (const s of Object.values(m.seats)) { s.bet = 0; }
+      for (const r of e.results) if (m.seats[r.seat]) m.seats[r.seat].stack = r.stack;
+      for (const sd of e.showdown) {
+        if (m.seats[sd.seat]) m.seats[sd.seat].cards = sd.cards;
+        addLog(m, { kind: "show", who: seatName(m, sd.seat), cards: sd.cards });
+      }
+      e.pots.forEach((p, i) => {
+        const names = p.winners.map(w => `${seatName(m, w.seat)} (${w.amount})`).join(", ");
+        const label = e.pots.length > 1 ? (i === 0 ? "Main pot" : `Side pot ${i}`) : "Pot";
+        addLog(m, { kind: "result", text: `${label} ${p.amount} → ${names}` });
+      });
+      break;
+
+    case "match_end":
+      if (!m) return;
+      m.standings = e.standings; m.toAct = null;
+      addLog(m, { kind: "system", text: `Match over after ${e.hands_played} hands` });
+      break;
+
+    case "server_stopped":
+      state.conn = "stopped";
+      break;
+  }
+}
+
+// ----------------------------------------------------------------- render
+function renderHeader() {
+  const conn = document.getElementById("conn");
+  const labels = { connecting: "Connecting…", live: "Live", reconnecting: "Reconnecting…", stopped: "Server stopped" };
+  conn.className = "pill " + (state.conn === "live" ? "live" : state.conn === "stopped" ? "stopped" : "");
+  conn.lastElementChild.textContent = labels[state.conn];
+
+  renderStart();
+  const m = state.match, meta = document.getElementById("meta");
+  if (!m) meta.textContent = `Lobby · ${state.lobby.length} bot${state.lobby.length === 1 ? "" : "s"} waiting`;
+  else if (m.standings) meta.textContent = `Match ${m.id} · finished`;
+  else meta.textContent = `Match ${m.id} · Hand ${m.hand || "–"} of ${m.config.hands_per_match} · Blinds ${m.config.small_blind}/${m.config.big_blind}`;
+}
+
+function renderTable() {
+  const m = state.match, el = document.getElementById("table");
+  const showCards = document.getElementById("showCards").checked;
+  let html = `<div class="felt"></div>`;
+  const maxPlayers = m ? m.config.max_players : 6;
+
+  for (let n = 0; n < 6; n++) {
+    const [x, y] = seatPos()[n];
+    const seat = m && m.seats[n];
+    if (!seat) {
+      if (n < maxPlayers) html += `<div class="seat empty" style="left:${x}%;top:${y}%">Seat ${n}<br>empty</div>`;
+      continue;
+    }
+    const winner = m.result && m.result.pots.some(p => p.winners.some(w => w.seat === n));
+    const acting = m.toAct && m.toAct.seat === n;
+    const cls = ["seat", seat.status, acting ? "acting" : "", winner ? "winner" : ""].join(" ");
+    const badges = [];
+    if (m.button === n) badges.push(`<span class="badge dealer">D</span>`);
+    if (m.sb === n && m.street === "preflop") badges.push(`<span class="badge">SB</span>`);
+    if (m.bb === n && m.street === "preflop") badges.push(`<span class="badge">BB</span>`);
+    if (seat.status === "all_in") badges.push(`<span class="badge allin">All-in</span>`);
+    if (seat.status === "out") badges.push(`<span class="badge">Busted</span>`);
+    if (!seat.connected) badges.push(`<span class="badge warn">Disconnected</span>`);
+
+    const revealed = m.result && m.result.showdown.some(s => s.seat === n);
+    const cards = seat.cards.length
+      ? seat.cards.map(c => cardHTML(showCards || revealed ? c : "back", "sm" + (seat.status === "folded" ? " dim" : ""))).join("")
+      : "";
+    const result = m.result && m.result.results.find(r => r.seat === n);
+    const net = result ? `<span class="${result.net > 0 ? "gain" : result.net < 0 ? "loss" : ""} num">${signed(result.net)}</span>` : "";
+    const timer = acting
+      ? `<div class="timer"><div style="width:${Math.max(0, (m.toAct.deadline - performance.now()) / m.toAct.timeout * 100)}%;transition:width ${Math.max(0, m.toAct.deadline - performance.now())}ms linear" data-timer></div></div>`
+      : "";
+    const last = seat.last ? `<div class="last ${seat.last.auto ? "auto" : ""}">${esc(seat.last.text)}${seat.last.auto ? ` · ${esc(seat.last.auto)}` : ""}</div>` : "";
+
+    html += `<div class="${cls}" style="left:${x}%;top:${y}%">
+      ${last}
+      <div class="top"><span class="name" title="${esc(seat.name)}">${esc(seat.name)}</span><span class="pid">${esc(seat.player_id)} · s${n}</span></div>
+      <div class="row"><span class="stack num">${seat.stack}</span><span class="cards">${cards}</span></div>
+      <div class="badges">${badges.join("")}${net ? `<span class="spacer"></span>${net}` : ""}</div>
+      ${timer}
+    </div>`;
+
+    if (seat.bet > 0) {
+      const bx = x + (50 - x) * 0.42, by = y + (50 - y) * 0.42;
+      html += `<div class="bet num" style="left:${bx}%;top:${by}%">${seat.bet}</div>`;
+    }
+  }
+
+  // centre: board and pot, or the lobby / final standings
+  if (!m) {
+    const names = state.lobby.map(p => `${esc(p.name)} <span class="pid">(${esc(p.player_id)})</span>`).join("<br>");
+    const srv = state.server, manual = srv && srv.manual;
+    const hint = manual
+      ? (state.lobby.length >= srv.min ? "Press Start when everyone's connected."
+                                       : `Need at least ${srv.min} bots to start.`)
+      : "The match starts automatically.";
+    html += `<div class="overlay"><h3>Waiting for bots</h3>
+      <p>${state.lobby.length ? `${state.lobby.length} in the lobby:<br>${names}` : "No bots connected yet."}</p>
+      <p style="margin-top:8px">${hint}</p>
+      ${manual ? `<button class="btn big" type="button" data-start ${startState().ok ? "" : "disabled"}>${esc(startState().label)}</button>` : ""}</div>`;
+  } else if (m.standings) {
+    html += `<div class="overlay"><h3>Final standings · ${esc(m.id)}</h3>${standingsTable(m.standings)}</div>`;
+  } else {
+    const board = [0, 1, 2, 3, 4].map(i => cardHTML(m.board[i])).join("");
+    let banner = "";
+    if (m.result) {
+      const wins = m.result.pots.flatMap(p => p.winners).reduce((acc, w) => {
+        acc[w.seat] = (acc[w.seat] || 0) + w.amount; return acc; }, {});
+      banner = `<div class="banner">${Object.entries(wins).map(([s, a]) => `${esc(seatName(m, s))} wins ${a}`).join(" · ")}</div>`;
+    }
+    html += `<div class="center">
+      <div class="street">${m.street === "done" ? "Hand over" : esc(STREET_NAMES[m.street] || "")}</div>
+      <div class="board">${board}</div>
+      <div class="pot num">Pot ${m.result ? m.result.pots.reduce((a, p) => a + p.amount, 0) : m.pot}</div>
+      ${banner}
+    </div>`;
+  }
+  el.innerHTML = html;
+
+  // start the countdown bar animating
+  const bar = el.querySelector("[data-timer]");
+  if (bar) requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = "0%"; }));
+}
+
+function standingsTable(rows) {
+  return `<table class="lb"><thead><tr><th>#</th><th>Bot</th><th class="r">Chips</th><th class="r">Net</th></tr></thead><tbody>
+    ${rows.map(s => `<tr class="${s.stack === 0 ? "busted" : ""}">
+      <td class="num">${s.rank}</td>
+      <td>${esc(s.name)} <span class="pid">${esc(s.player_id)}</span>${s.connected === false ? ` <span class="badge warn">DC</span>` : ""}</td>
+      <td class="r num">${s.stack}</td>
+      <td class="r num ${s.net > 0 ? "gain" : s.net < 0 ? "loss" : ""}">${signed(s.net)}</td></tr>`).join("")}
+  </tbody></table>`;
+}
+
+function renderLeaderboard() {
+  const m = state.match, el = document.getElementById("leaderboard");
+  document.getElementById("lbTitle").textContent = m && m.standings ? "Final standings" : "Chip counts";
+  if (!m || !Object.keys(m.seats).length) { el.innerHTML = `<div class="empty-note">No match running.</div>`; return; }
+  if (m.standings) { el.innerHTML = standingsTable(m.standings); return; }
+  // Chips behind (not counting anything already in the pot this hand).
+  const seats = Object.values(m.seats).map(s => ({ ...s, net: s.stack - s.start }));
+  seats.sort((a, b) => b.stack - a.stack);
+  el.innerHTML = `<table class="lb"><thead><tr><th>#</th><th>Bot</th><th class="r">Chips</th><th class="r">Net</th></tr></thead><tbody>
+    ${seats.map((s, i) => `<tr class="${s.status === "out" ? "busted" : ""}">
+      <td class="num">${i + 1}</td>
+      <td>${esc(s.name)} <span class="pid">${esc(s.player_id)}</span></td>
+      <td class="r num">${s.stack}</td>
+      <td class="r num ${s.net > 0 ? "gain" : s.net < 0 ? "loss" : ""}">${signed(s.net)}</td></tr>`).join("")}
+  </tbody></table>`;
+}
+
+function renderLog() {
+  const m = state.match, el = document.getElementById("log");
+  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  if (!m) { el.innerHTML = `<div class="empty-note">Actions appear here once a match starts.</div>`; return; }
+  el.innerHTML = m.log.map(x => {
+    switch (x.kind) {
+      case "hand": return `<div class="hand">${esc(x.text)}</div>`;
+      case "street": return `<div class="street-row"><strong>${esc(STREET_NAMES[x.street])}</strong><span class="cards">${x.board.map(miniCard).join("")}</span><span class="num">pot ${x.pot}</span></div>`;
+      case "action": return `<div class="item"><span class="who">${esc(x.who)}</span><span class="what">${esc(x.text)}</span>${x.auto ? `<span class="tag">${esc(x.auto)}</span>` : ""}</div>`;
+      case "show": return `<div class="item"><span class="who">${esc(x.who)}</span><span class="what">shows ${x.cards.map(miniCard).join(" ")}</span></div>`;
+      case "result": return `<div class="item result"><span class="what">${esc(x.text)}</span></div>`;
+      case "system": return `<div class="item system"><span class="what">${esc(x.text)}</span></div>`;
+    }
+    return "";
+  }).join("");
+  if (atBottom) el.scrollTop = el.scrollHeight;
+}
+
+function startState() {
+  const srv = state.server, n = state.lobby.length;
+  if (!srv || !srv.manual) return { show: false };
+  const seats = Math.min(n, srv.max);
+  if (state.conn !== "live") return { show: true, ok: false, label: "Start match", why: "Not connected to the server" };
+  if (srv.running) return { show: true, ok: false, label: "Match running", why: "Wait for the current match to finish" };
+  if (state.starting) return { show: true, ok: false, label: "Starting…", why: "" };
+  if (n < srv.min) return { show: true, ok: false, label: "Start match", why: `Need at least ${srv.min} bots (${n} waiting)` };
+  return { show: true, ok: true, label: `Start match · ${seats} bots`,
+           why: n > srv.max ? `${n} waiting; the first ${srv.max} get seats` : "" };
+}
+
+function renderStart() {
+  const btn = document.getElementById("startBtn"), st = startState();
+  btn.hidden = !st.show;
+  if (!st.show) return;
+  btn.disabled = !st.ok;
+  btn.textContent = st.label;
+  btn.title = st.why || "";
+  const notice = document.getElementById("notice");
+  notice.textContent = state.notice ? state.notice.text : "";
+  notice.className = "notice" + (state.notice && state.notice.err ? " err" : "");
+}
+
+async function startMatch() {
+  if (!startState().ok) return;
+  state.starting = true; state.notice = null; render();
+  try {
+    const res = await fetch("/start", { method: "POST", headers: { "X-NUCATS-Action": "start" } });
+    const body = await res.json();
+    state.notice = { text: body.message, err: !body.ok };
+  } catch (err) {
+    state.notice = { text: "Couldn't reach the server", err: true };
+  }
+  state.starting = false;
+  render();
+  setTimeout(() => { state.notice = null; renderStart(); }, 5000);
+}
+
+function render() { renderHeader(); renderTable(); renderLeaderboard(); renderLog(); }
+
+// ----------------------------------------------------------------- stream
+let pending = false;
+function scheduleRender() {
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => { pending = false; render(); });
+}
+
+function connect() {
+  const es = new EventSource("/events");
+  es.onopen = () => { state.conn = "live"; scheduleRender(); };
+  es.onmessage = msg => {
+    const e = JSON.parse(msg.data);
+    apply(e);
+    if (e.type === "server_stopped") es.close();
+    scheduleRender();
+  };
+  es.onerror = () => {
+    if (state.conn !== "stopped") { state.conn = "reconnecting"; scheduleRender(); }
+  };
+}
+
+const toggle = document.getElementById("showCards");
+toggle.checked = storage("nucats.showCards") !== "0";
+toggle.addEventListener("change", () => { storage("nucats.showCards", toggle.checked ? "1" : "0"); render(); });
+narrow.addEventListener("change", render);
+document.getElementById("startBtn").addEventListener("click", startMatch);
+document.getElementById("table").addEventListener("click", ev => {
+  if (ev.target.closest("[data-start]")) startMatch();
+});
+
+render();
+connect();
+</script>
+</body>
+</html>

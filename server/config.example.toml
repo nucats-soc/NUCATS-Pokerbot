@@ -1,0 +1,21 @@
+# Copy to config.toml and run: pokerserver --port 8000 --config config.toml
+# The port is always given on the command line, not in this file.
+# Every key is optional; these are the defaults.
+
+host = "0.0.0.0"
+
+max_players = 6
+min_players = 2
+starting_stack = 1000
+small_blind = 10
+big_blind = 20
+hands_per_match = 20
+
+action_timeout_ms = 5000
+hello_timeout_s = 10.0
+action_delay_ms = 0      # pause between actions so humans can watch (e.g. 500)
+lobby_wait_s = 30.0      # start with >= min_players after this many seconds
+max_matches = 1          # then disconnect everyone and exit; 0 = run forever
+
+log_dir = "logs"
+# seed = 12345           # uncomment for reproducible matches

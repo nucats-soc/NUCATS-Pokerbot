@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nucats-pokerserver"
+version = "0.1.0"
+description = "Table server for the NUCATS Pokerbots tournament (protocol v1)"
+requires-python = ">=3.12"
+dependencies = ["pokerkit >= 0.7, < 0.8"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+pokerserver = "pokerserver.__main__:main"
+
+[tool.setuptools.package-data]
+pokerserver = ["web/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
