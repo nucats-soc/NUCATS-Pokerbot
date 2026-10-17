@@ -275,8 +275,8 @@ table.lb tr.busted td { color: var(--muted); }
 
 // Seat positions round the table (percent of the table box), clockwise from
 // the bottom. Bets sit part-way towards the centre.
-const SEAT_POS_WIDE = [[50, 93], [9, 73], [9, 27], [50, 7], [91, 27], [91, 73]];
-const SEAT_POS_TALL = [[50, 94], [17, 71], [17, 29], [50, 6], [83, 29], [83, 71]];
+const SEAT_POS_WIDE = [[50, 93], [24, 86], [8, 50], [24, 14], [50, 7], [76, 14], [92, 50], [76, 86]];
+const SEAT_POS_TALL = [[50, 94], [17, 76], [17, 50], [17, 24], [50, 6], [83, 24], [83, 50], [83, 76]];
 const narrow = window.matchMedia("(max-width: 700px)");
 const seatPos = () => narrow.matches ? SEAT_POS_TALL : SEAT_POS_WIDE;
 const SUITS = { c: "♣", d: "♦", h: "♥", s: "♠" };
@@ -339,7 +339,7 @@ function apply(e) {
     case "lobby":
       state.lobby = e.players;
       state.server = { manual: !!e.manual_start, running: !!e.match_running,
-                       min: e.min_players || 2, max: e.max_players || 6 };
+                       min: e.min_players || 2, max: e.max_players || 8 };
       break;
 
     case "match_info":
@@ -452,9 +452,9 @@ function renderTable() {
   const m = state.match, el = document.getElementById("table");
   const showCards = document.getElementById("showCards").checked;
   let html = `<div class="felt"></div>`;
-  const maxPlayers = m ? m.config.max_players : 6;
+  const maxPlayers = m ? m.config.max_players : 8;
 
-  for (let n = 0; n < 6; n++) {
+  for (let n = 0; n < 8; n++) {
     const [x, y] = seatPos()[n];
     const seat = m && m.seats[n];
     if (!seat) {

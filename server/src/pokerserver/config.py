@@ -6,7 +6,7 @@ from dataclasses import dataclass, fields
 class Config:
     host: str = "0.0.0.0"
 
-    max_players: int = 6
+    max_players: int = 8
     min_players: int = 2
     starting_stack: int = 1000
     small_blind: int = 10
@@ -40,8 +40,8 @@ class Config:
         }
 
     def validate(self) -> None:
-        if not 2 <= self.min_players <= self.max_players <= 6:
-            raise ValueError("need 2 <= min_players <= max_players <= 6")
+        if not 2 <= self.min_players <= self.max_players <= 8:
+            raise ValueError("need 2 <= min_players <= max_players <= 8")
         if not 0 < self.small_blind <= self.big_blind:
             raise ValueError("need 0 < small_blind <= big_blind")
         if self.starting_stack <= 0 or self.hands_per_match <= 0:

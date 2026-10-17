@@ -128,7 +128,7 @@ hand_strength(state.my_cards, state.board)   # 0.0 (bad) to 1.0 (amazing)
 
 ## 4. The rules
 
-- Up to 6 bots at a table. Everyone starts with **1000 chips**. Blinds are **10/20**.
+- Up to 8 bots at a table. Everyone starts with **1000 chips**. Blinds are **10/20**.
 - A match is **20 hands**. Whoever has the most chips at the end wins.
 - You have **5 seconds** per move. If you're too slow, you check, or fold if you can't check.
 - If your bot disconnects, it can't rejoin that match. Its seat keeps checking and folding until the end.

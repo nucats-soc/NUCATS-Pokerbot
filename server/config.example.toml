@@ -4,7 +4,7 @@
 
 host = "0.0.0.0"
 
-max_players = 6
+max_players = 8
 min_players = 2
 starting_stack = 1000
 small_blind = 10

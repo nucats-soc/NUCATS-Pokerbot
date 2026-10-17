@@ -76,7 +76,7 @@ Rules for both sides:
 1. **Connect** to the server's host and port.
 2. **Send `hello`** within **10 seconds**, or the server closes the connection.
 3. **Receive `welcome`.** You're now in the lobby.
-4. **Wait for a match.** Depending on how the organiser runs the server, a match starts either when the organiser presses Start, or automatically: when the table is full (6 bots), or when at least 2 bots have waited for the lobby wait time. Either way, your bot just waits for `match_start`. If more bots are waiting than there are seats, the ones that arrived first get seated.
+4. **Wait for a match.** Depending on how the organiser runs the server, a match starts either when the organiser presses Start, or automatically: when the table is full (8 bots), or when at least 2 bots have waited for the lobby wait time. Either way, your bot just waits for `match_start`. If more bots are waiting than there are seats, the ones that arrived first get seated.
 5. **Play the match** (§5).
 6. **After `match_end`**, by default the server closes every connection and shuts down, so your bot should exit when the socket closes. If the organiser has set the server to run more matches, connected bots go back to the lobby instead and may be seated in the next one.
 7. You can **disconnect** at any time by closing the socket.
@@ -86,7 +86,7 @@ Rules for both sides:
 | Setting | Value |
 |---|---|
 | Game | No-limit Texas Hold'em |
-| Seats | Up to 6, numbered `0`–`5` |
+| Seats | Up to 8, numbered `0`–`7` |
 | Starting stack | 1000 chips |
 | Blinds | 10 small / 20 big, fixed for the whole match |
 | Antes | None |
@@ -97,7 +97,7 @@ The organiser can change these values. The ones in force are always sent to you 
 - **Seating** is random at the start of each match.
 - **Chips carry over** from hand to hand for the whole match. Stacks are reset only when a new match starts.
 - **Busting:** a player with 0 chips at the start of a hand is out. They are not dealt in and take no further part in the match.
-- **The button** starts on a random occupied seat for hand 1. It then moves clockwise (to the next higher seat number, wrapping from 5 to 0) to the next player who still has chips.
+- **The button** starts on a random occupied seat for hand 1. It then moves clockwise (to the next higher seat number, wrapping from 7 to 0) to the next player who still has chips.
 - **Blinds:** with 3 or more players, the small blind is the first player with chips clockwise of the button, and the big blind is the next one after that. **Heads-up** (2 players), the button posts the small blind and acts first before the flop. A player who can't cover a blind posts everything they have and is all-in.
 - **Minimum raise:** the first bet on a street must be at least the big blind. A raise must increase the bet by at least as much as the previous bet or raise on that street. You may always go all-in for less.
 - **The match ends** after the configured number of hands, or earlier if only one player has chips left.
@@ -185,7 +185,7 @@ Your reply to `hello`.
   "player_id": "p7",
   "name": "MyBot",
   "config": {
-    "max_players": 6,
+    "max_players": 8,
     "starting_stack": 1000,
     "small_blind": 10,
     "big_blind": 20,
